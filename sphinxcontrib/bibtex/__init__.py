@@ -46,6 +46,28 @@ def purge_bibtex_cache(app, env, docname):
     env.bibtex_cache.purge(docname)
 
 
+def disable_latex_transform(app):
+    """Disable sphinx.builders.latex.BibliographyTransform if needed.
+
+    :param app: The sphinx application.
+    :type app: :class:`sphinx.application.Sphinx`
+    """
+    if app.config.bibtex_latex_bibliography_at_end:
+        return
+
+    import docutils
+    import sphinx.builders.latex
+
+    class DummyTransform(docutils.transforms.Transform):
+
+        default_priority = 0
+
+        def apply(self):
+            pass
+
+    sphinx.builders.latex.BibliographyTransform = DummyTransform
+
+
 def process_citations(app, doctree, docname):
     """Replace labels of citation nodes by actual labels.
 
@@ -129,7 +151,9 @@ def setup(app):
     """
 
     app.add_config_value("bibtex_default_style", "alpha", "html")
+    app.add_config_value("bibtex_latex_bibliography_at_end", True, "latex")
     app.connect("builder-inited", init_bibtex_cache)
+    app.connect("builder-inited", disable_latex_transform)
     app.connect("doctree-resolved", process_citations)
     app.connect("doctree-resolved", process_citation_references)
     app.connect("env-purge-doc", purge_bibtex_cache)
